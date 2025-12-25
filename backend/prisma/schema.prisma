@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  TECHNICIAN
+  MANAGER
+}
+
+enum QuoteStatus {
+  DRAFT
+  SIGNED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Hashed password
+  role      Role     @default(TECHNICIAN)
+  firstName String
+  lastName  String
+  active    Boolean  @default(true)
+  quotes    Quote[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Quote {
+  id              String       @id @default(uuid())
+  technicianId    String
+  technician      User          @relation(fields: [technicianId], references: [id])
+  clientName      String
+  clientAddress   String
+  clientEmail     String?
+  status          QuoteStatus   @default(DRAFT)
+  signature       String?       // Base64 or URL to S3
+  signedAt        DateTime?
+  parts           Part[]
+  labor           Labor[]
+  fees            Fee[]
+  taxes           Float         @default(0)
+  totalAmount     Float         @default(0) // Calculated server-side
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Part {
+  id              String   @id @default(uuid())
+  quoteId         String
+  quote           Quote    @relation(fields: [quoteId], references: [id])
+  name            String
+  partNumber      String
+  supplier        String
+  basePrice       Float    // Cheapest price found
+  markupPrice     Float    // basePrice * 1.35
+  quantity        Int      @default(1)
+  createdAt       DateTime @default(now())
+}
+
+model Labor {
+  id              String   @id @default(uuid())
+  quoteId         String
+  quote           Quote    @relation(fields: [quoteId], references: [id])
+  description     String
+  hourlyRate      Float
+  hours           Float
+  total           Float    // rate * hours
+  createdAt       DateTime @default(now())
+}
+
+model Fee {
+  id              String   @id @default(uuid())
+  quoteId         String
+  quote           Quote    @relation(fields: [quoteId], references: [id])
+  name            String
+  amount          Float
+  createdAt       DateTime @default(now())
+}
