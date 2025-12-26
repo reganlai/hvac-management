@@ -15,8 +15,9 @@ export default function TechnicianTabs() {
                 tabBarActiveTintColor: '#007AFF',
                 tabBarInactiveTintColor: '#666',
                 tabBarStyle: {
-                    paddingBottom: 8,
-                    height: 60,
+                    paddingTop: 12,
+                    paddingBottom: 0,
+                    height: 85,
                 },
                 tabBarLabelStyle: {
                     fontSize: 12,

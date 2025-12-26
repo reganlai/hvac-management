@@ -11,6 +11,8 @@ import SignatureCaptureScreen from '../screens/SignatureCaptureScreen';
 import QuoteDetails from '../screens/QuoteDetails';
 import AddTechnician from '../screens/AddTechnician';
 import TechnicianDetails from '../screens/TechnicianDetails';
+import AddLaborScreen from '../screens/AddLaborScreen';
+import AddFeeScreen from '../screens/AddFeeScreen';
 import TechnicianTabs from './TechnicianTabs';
 
 const Stack = createStackNavigator();
@@ -30,6 +32,8 @@ export default function AppNavigator() {
                     <Stack.Screen name="SupplierLookup" component={SupplierWebView} />
                     <Stack.Screen name="CapturePart" component={CapturePartScreen} />
                     <Stack.Screen name="QuoteBuilder" component={QuoteBuilder} />
+                    <Stack.Screen name="AddLabor" component={AddLaborScreen} />
+                    <Stack.Screen name="AddFee" component={AddFeeScreen} />
                     <Stack.Screen name="SignatureCapture" component={SignatureCaptureScreen} />
                     <Stack.Screen name="QuoteDetails" component={QuoteDetails} />
                 </>

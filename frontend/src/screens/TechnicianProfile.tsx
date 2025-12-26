@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
-import { User, Mail, Calendar, FileText, ChevronRight, Award } from 'lucide-react-native';
+import { User, Mail, Calendar, FileText, ChevronRight, Award, LogOut } from 'lucide-react-native';
 
 export default function TechnicianProfile({ navigation }: any) {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [quotes, setQuotes] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -37,11 +37,6 @@ export default function TechnicianProfile({ navigation }: any) {
                         <FileText color="#007AFF" size={20} />
                         <Text style={styles.statValue}>156</Text>
                         <Text style={styles.statLabel}>Quotes</Text>
-                    </View>
-                    <View style={styles.statBox}>
-                        <Award color="#4CD964" size={20} />
-                        <Text style={styles.statValue}>4.9</Text>
-                        <Text style={styles.statLabel}>Rating</Text>
                     </View>
                 </View>
 
@@ -91,6 +86,13 @@ export default function TechnicianProfile({ navigation }: any) {
                             </TouchableOpacity>
                         ))
                     )}
+                </View>
+
+                <View style={styles.logoutSection}>
+                    <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+                        <LogOut color="#FF3B30" size={20} />
+                        <Text style={styles.logoutText}>Sign Out</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -240,5 +242,26 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#1a1a1a',
         marginRight: 8,
+    },
+    logoutSection: {
+        padding: 24,
+        paddingTop: 0,
+        marginBottom: 40,
+    },
+    logoutButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#FFE5E5',
+    },
+    logoutText: {
+        color: '#FF3B30',
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 12,
     },
 });
