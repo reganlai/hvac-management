@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Save } from 'lucide-react-native';
+import { useQuoteContext } from '../context/QuoteContext';
 
 export default function CapturePartScreen({ route, navigation }: any) {
+    const { addPart } = useQuoteContext();
     const { supplier } = route.params;
     const [partName, setPartName] = useState('');
     const [partNumber, setPartNumber] = useState('');
@@ -11,8 +13,8 @@ export default function CapturePartScreen({ route, navigation }: any) {
     const [quantity, setQuantity] = useState('1');
 
     const handleSave = () => {
-        if (!partName || !partNumber || !basePrice) {
-            Alert.alert('Error', 'Please fill in all required fields');
+        if (!partNumber || !basePrice) {
+            Alert.alert('Error', 'Part Number and Price are required');
             return;
         }
 
@@ -23,7 +25,7 @@ export default function CapturePartScreen({ route, navigation }: any) {
         }
 
         const newPart = {
-            name: partName,
+            name: partName || 'Unknown Part',
             partNumber: partNumber,
             supplier: supplier,
             basePrice: price,
@@ -31,15 +33,30 @@ export default function CapturePartScreen({ route, navigation }: any) {
             markupPrice: price * 1.35
         };
 
-        // In a real app, this would save to a temporary state/store
-        // For now, we'll navigate back with the data
-        navigation.navigate('QuoteBuilder', { newPart });
+        addPart(newPart);
+        // Navigate back to QuoteBuilder, popping the WebView stack
+        navigation.navigate('QuoteBuilder');
+    };
+
+    const handleBack = () => {
+        if (partName || partNumber || basePrice) {
+            Alert.alert(
+                'Discard Changes?',
+                'All entered data will be lost.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() }
+                ]
+            );
+        } else {
+            navigation.goBack();
+        }
     };
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
+                <TouchableOpacity onPress={handleBack}>
                     <ArrowLeft color="#333" size={24} />
                 </TouchableOpacity>
                 <Text style={styles.title}>Capture Part Details</Text>
@@ -52,7 +69,7 @@ export default function CapturePartScreen({ route, navigation }: any) {
                 <Text style={styles.label}>Supplier</Text>
                 <TextInput style={[styles.input, styles.disabledInput]} value={supplier} editable={false} />
 
-                <Text style={styles.label}>Part Name *</Text>
+                <Text style={styles.label}>Part Name</Text>
                 <TextInput
                     style={styles.input}
                     placeholder="e.g. Condenser Fan Motor"
@@ -65,7 +82,9 @@ export default function CapturePartScreen({ route, navigation }: any) {
                     style={styles.input}
                     placeholder="e.g. MOT-12345"
                     value={partNumber}
-                    onChangeText={setPartNumber}
+                    onChangeText={(text) => setPartNumber(text.toUpperCase().trimStart())}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
                 />
 
                 <View style={styles.row}>

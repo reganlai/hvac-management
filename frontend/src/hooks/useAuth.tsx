@@ -29,8 +29,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loadStoredData = async () => {
         try {
             const storedUser = await SecureStore.getItemAsync('userData');
-            if (storedUser) {
+            const token = await SecureStore.getItemAsync('userToken');
+
+            if (storedUser && token) {
                 setUser(JSON.parse(storedUser));
+            } else {
+                // Inconsistent state, clear everything
+                await SecureStore.deleteItemAsync('userToken');
+                await SecureStore.deleteItemAsync('userData');
+                setUser(null);
             }
         } catch (e) {
             console.error('Failed to load storage', e);

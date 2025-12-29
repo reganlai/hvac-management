@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Save } from 'lucide-react-native';
+import { useQuoteContext } from '../context/QuoteContext';
 
 export default function AddLaborScreen({ navigation }: any) {
+    const { addLabor } = useQuoteContext();
     const [description, setDescription] = useState('');
     const [hourlyRate, setHourlyRate] = useState('85'); // Default rate
     const [hours, setHours] = useState('1');
@@ -29,7 +31,8 @@ export default function AddLaborScreen({ navigation }: any) {
             total: rate * hrs
         };
 
-        navigation.navigate('QuoteBuilder', { newLabor });
+        addLabor(newLabor);
+        navigation.goBack();
     };
 
     return (

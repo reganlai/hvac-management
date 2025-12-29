@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-
-const getJwtSecret = () => process.env.JWT_SECRET || 'supersecret';
+import { getJwtSecret } from '../config/auth.js';
 
 export interface AuthRequest extends Request {
     user?: {
@@ -19,12 +18,13 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
 
     try {
         const secret = getJwtSecret();
-        console.log(`[Auth] Verifying with secret (first 3 chars): ${secret.substring(0, 3)}...`);
+        console.log(`[Auth] Verifying token (length: ${token.length}) with secret (first 3: ${secret.substring(0, 3)}...)`);
         const decoded = jwt.verify(token, secret) as { id: string; role: 'TECHNICIAN' | 'MANAGER' };
         req.user = decoded;
         next();
-    } catch (error) {
-        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    } catch (error: any) {
+        console.error(`[Auth] Token verification failed for token length ${token?.length}: ${error.message}`);
+        return res.status(401).json({ error: `Unauthorized: ${error.message}` });
     }
 };
 

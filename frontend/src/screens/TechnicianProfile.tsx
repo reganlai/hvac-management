@@ -1,29 +1,51 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
+import { quoteApi } from '../services/api';
 import { User, Mail, Calendar, FileText, ChevronRight, Award, LogOut } from 'lucide-react-native';
 
 export default function TechnicianProfile({ navigation }: any) {
     const { user, logout } = useAuth();
     const [quotes, setQuotes] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        // Simulate fetching recent quotes
-        setTimeout(() => {
-            setQuotes([
-                { id: '1', client: 'John Doe', total: 450.00, date: '2023-11-20', status: 'SIGNED' },
-                { id: '2', client: 'Mary Jane', total: 1200.50, date: '2023-11-18', status: 'SIGNED' },
-                { id: '3', client: 'Bob Builder', total: 85.00, date: '2023-11-15', status: 'DRAFT' },
-            ]);
+    useFocusEffect(
+        useCallback(() => {
+            loadQuotes();
+        }, [])
+    );
+
+    const loadQuotes = async () => {
+        try {
+            const response = await quoteApi.getQuotes();
+            setQuotes(response.data);
+        } catch (error: any) {
+            console.error('Failed to load quotes:', error);
+            if (error.response?.status === 401) {
+                logout();
+            }
+        } finally {
             setIsLoading(false);
-        }, 800);
+            setRefreshing(false);
+        }
+    };
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        loadQuotes();
     }, []);
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView style={styles.content}>
+            <ScrollView
+                style={styles.content}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
+            >
                 <View style={styles.profileHeader}>
                     <View style={styles.avatarCircle}>
                         <User color="#fff" size={40} />
@@ -35,29 +57,17 @@ export default function TechnicianProfile({ navigation }: any) {
                 <View style={styles.statsRow}>
                     <View style={styles.statBox}>
                         <FileText color="#007AFF" size={20} />
-                        <Text style={styles.statValue}>156</Text>
+                        <Text style={styles.statValue}>{quotes.length}</Text>
                         <Text style={styles.statLabel}>Quotes</Text>
                     </View>
                 </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Account Information</Text>
-                    <View style={styles.infoCard}>
-                        <View style={styles.infoRow}>
-                            <Mail color="#666" size={18} />
-                            <Text style={styles.infoText}>{user?.email}</Text>
-                        </View>
-                        <View style={styles.infoRow}>
-                            <Calendar color="#666" size={18} />
-                            <Text style={styles.infoText}>Member since Oct 2023</Text>
-                        </View>
-                    </View>
-                </View>
+
 
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Recent Quotes</Text>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigation.navigate('AllQuotes')}>
                             <Text style={styles.seeAll}>See All</Text>
                         </TouchableOpacity>
                     </View>
@@ -65,22 +75,22 @@ export default function TechnicianProfile({ navigation }: any) {
                     {isLoading ? (
                         <ActivityIndicator color="#007AFF" style={{ marginTop: 20 }} />
                     ) : (
-                        quotes.map(item => (
+                        quotes.slice(0, 5).map(item => (
                             <TouchableOpacity
                                 key={item.id}
                                 style={styles.quoteCard}
                                 onPress={() => navigation.navigate('QuoteDetails', { quote: { ...item, client: item.client, technician: `${user?.firstName} ${user?.lastName}` } })}
                             >
                                 <View style={styles.quoteInfo}>
-                                    <Text style={styles.clientName}>{item.client}</Text>
+                                    <Text style={styles.clientName}>{item.clientName || 'Unknown Client'}</Text>
                                     <View style={styles.quoteMeta}>
-                                        <Text style={styles.quoteDate}>{item.date}</Text>
+                                        <Text style={styles.quoteDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
                                         <Text style={styles.dot}>•</Text>
                                         <Text style={[styles.status, { color: item.status === 'SIGNED' ? '#4CD964' : '#FF9500' }]}>{item.status}</Text>
                                     </View>
                                 </View>
                                 <View style={styles.quoteAmountContainer}>
-                                    <Text style={styles.quoteAmount}>${item.total.toFixed(2)}</Text>
+                                    <Text style={styles.quoteAmount}>${Number(item.totalAmount || 0).toFixed(2)}</Text>
                                     <ChevronRight color="#CCC" size={18} />
                                 </View>
                             </TouchableOpacity>

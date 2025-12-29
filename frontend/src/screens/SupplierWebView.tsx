@@ -30,7 +30,7 @@ export default function SupplierWebView({ route, navigation }: any) {
                     navigation.navigate('CapturePart', { supplier: supplierName });
                 }}>
                     <Box color="#fff" size={20} />
-                    <Text style={styles.captureText}>Capture</Text>
+                    <Text style={styles.captureText}>Add part to quote</Text>
                 </TouchableOpacity>
             </View>
 

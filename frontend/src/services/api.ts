@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE_URL = 'http://192.168.7.240:3001/api'; // Local network IP
+const API_BASE_URL = 'http://192.168.1.157:3001/api'; // Local network IP
 
 
 const api = axios.create({
@@ -22,10 +22,14 @@ export const authApi = {
 
 export const userApi = {
     getProfile: () => api.get('/auth/profile'),
+    getTechnicians: () => api.get('/users'),
     createTechnician: (userData: any) => api.post('/users', userData),
 };
 
 export const quoteApi = {
+    getQuotes: () => api.get('/quotes'),
+    getAllQuotes: () => api.get('/quotes/all'),
+    getQuotesByUser: (userId: string) => api.get(`/quotes/user/${userId}`),
     createQuote: (quoteData: any) => api.post('/quotes', quoteData),
     addPart: (quoteId: string, partData: any) => api.post(`/quotes/${quoteId}/parts`, partData),
     addLabor: (quoteId: string, laborData: any) => api.post(`/quotes/${quoteId}/labor`, laborData),

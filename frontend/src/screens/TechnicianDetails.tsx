@@ -1,26 +1,43 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, User, Mail, Calendar, MapPin, Phone, Award, FileText } from 'lucide-react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { quoteApi } from '../services/api';
 
 export default function TechnicianDetails({ route, navigation }: any) {
     const { technician } = route.params;
+    const [quotes, setQuotes] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Simulated data for technician stats
-    const stats = {
-        joinedDate: 'Jan 2023',
-        location: 'Seattle, WA',
-        phone: '(555) 123-4567',
-        completedQuotes: 42,
-        rating: 4.8,
-        active: technician.active
+    const loadQuotes = async () => {
+        setIsLoading(true);
+        try {
+            const res = await quoteApi.getQuotesByUser(technician.id);
+            setQuotes(res.data);
+        } catch (error) {
+            console.error('Failed to load technician quotes:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const RECENT_HISTORY = [
-        { id: '1', client: 'John Doe', status: 'SIGNED', total: 450.00, date: '2023-11-20' },
-        { id: '2', client: 'Jane Roe', status: 'SIGNED', total: 1200.00, date: '2023-11-18' },
-        { id: '3', client: 'Bob Smith', status: 'DRAFT', total: 300.00, date: '2023-11-15' },
-    ];
+    useFocusEffect(
+        useCallback(() => {
+            loadQuotes();
+        }, [technician.id])
+    );
+
+    const completedQuotesCount = quotes.filter(q => q.status === 'SIGNED').length;
+
+    // Simulated data for static fields (since user model is simple)
+    const stats = {
+        joinedDate: new Date(technician.createdAt || Date.now()).toLocaleDateString(),
+        location: 'Seattle, WA', // Placeholder
+        phone: '(555) 123-4567', // Placeholder
+        completedQuotes: completedQuotesCount,
+        active: technician.active
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -37,7 +54,7 @@ export default function TechnicianDetails({ route, navigation }: any) {
                     <View style={styles.avatarContainer}>
                         <User color="#007AFF" size={40} />
                     </View>
-                    <Text style={styles.name}>{technician.name}</Text>
+                    <Text style={styles.name}>{technician.firstName} {technician.lastName}</Text>
                     <Text style={styles.email}>{technician.email}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: stats.active ? '#E1F8EB' : '#FEE2E2' }]}>
                         <Text style={[styles.statusText, { color: stats.active ? '#27AE60' : '#EF4444' }]}>
@@ -73,20 +90,29 @@ export default function TechnicianDetails({ route, navigation }: any) {
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Recent Activity</Text>
-                    {RECENT_HISTORY.map((item) => (
-                        <TouchableOpacity
-                            key={item.id}
-                            style={styles.activityCard}
-                            onPress={() => navigation.navigate('QuoteDetails', { quote: { ...item, technician: technician.name } })}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.activityClient}>{item.client}</Text>
-                                <Text style={styles.activityDate}>{item.date}</Text>
-                            </View>
-                            <Text style={styles.activityAmount}>${item.total.toFixed(2)}</Text>
-                        </TouchableOpacity>
-                    ))}
+                    <Text style={styles.sectionTitle}>Quotes Completed</Text>
+                    {isLoading ? (
+                        <ActivityIndicator size="small" color="#007AFF" />
+                    ) : quotes.length === 0 ? (
+                        <Text style={styles.emptyText}>No quotes found.</Text>
+                    ) : (
+                        quotes.map((item) => (
+                            <TouchableOpacity
+                                key={item.id}
+                                style={styles.activityCard}
+                                onPress={() => navigation.navigate('QuoteDetails', { quote: { ...item, technician: `${technician.firstName} ${technician.lastName}` } })}
+                            >
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.activityClient}>{item.clientName || 'Unknown Client'}</Text>
+                                    <Text style={styles.activityDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                                    <View style={[styles.statusBadge, { backgroundColor: item.status === 'SIGNED' ? '#E1F8EB' : '#FFF4E5', alignSelf: 'flex-start', marginTop: 4 }]}>
+                                        <Text style={[styles.statusText, { color: item.status === 'SIGNED' ? '#27AE60' : '#FF9500', fontSize: 10 }]}>{item.status}</Text>
+                                    </View>
+                                </View>
+                                <Text style={styles.activityAmount}>${Number(item.totalAmount || 0).toFixed(2)}</Text>
+                            </TouchableOpacity>
+                        ))
+                    )}
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -226,5 +252,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: '#1a1a1a',
+    },
+    emptyText: {
+        textAlign: 'center',
+        color: '#999',
+        marginTop: 12,
+        fontStyle: 'italic',
     }
 });

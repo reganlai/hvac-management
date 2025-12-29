@@ -2,31 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Trash2, PenTool, CheckCircle, Calculator, X } from 'lucide-react-native';
-import { TextInput } from 'react-native-gesture-handler'; // Ensure using proper gesture handler if available or just default from react-native
+import { TextInput } from 'react-native-gesture-handler';
 import { quoteApi } from '../services/api';
+import { useQuoteContext } from '../context/QuoteContext';
 
 export default function QuoteBuilder({ route, navigation }: any) {
-    const [parts, setParts] = useState<any[]>([]);
-    const [labor, setLabor] = useState<any[]>([]);
-    const [fees, setFees] = useState<any[]>([]);
-    const [clientName, setClientName] = useState('');
-    const [clientAddress, setClientAddress] = useState('');
-    const [clientZip, setClientZip] = useState('');
-    const [notes, setNotes] = useState('');
+    const {
+        parts, labor, fees,
+        clientName, setClientName,
+        clientEmail, setClientEmail,
+        clientAddress, setClientAddress,
+        clientZip, setClientZip,
+        notes, setNotes,
+        removePart, removeLabor, removeFee, resetQuote
+    } = useQuoteContext();
+
     const [taxRate, setTaxRate] = useState(0.08); // Default 8%
     const [taxAmount, setTaxAmount] = useState(0);
-
-    useEffect(() => {
-        if (route.params?.newPart) {
-            setParts([...parts, route.params.newPart]);
-        }
-        if (route.params?.newLabor) {
-            setLabor([...labor, route.params.newLabor]);
-        }
-        if (route.params?.newFee) {
-            setFees([...fees, route.params.newFee]);
-        }
-    }, [route.params?.newPart, route.params?.newLabor, route.params?.newFee]);
 
     // Simple tax rate lookup based on zip (mock)
     useEffect(() => {
@@ -72,7 +64,59 @@ export default function QuoteBuilder({ route, navigation }: any) {
             "Are you sure you want to discard this quote? All unsaved changes will be lost.",
             [
                 { text: "Cancel", style: "cancel" },
-                { text: "Discard", style: "destructive", onPress: () => navigation.goBack() }
+                {
+                    text: "Discard",
+                    style: "destructive",
+                    onPress: () => {
+                        resetQuote();
+                        navigation.goBack();
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleDeletePart = (index: number) => {
+        Alert.alert(
+            "Delete Part",
+            "Are you sure you want to remove this part?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => removePart(index)
+                }
+            ]
+        );
+    };
+
+    const handleDeleteLabor = (index: number) => {
+        Alert.alert(
+            "Delete Labor",
+            "Are you sure you want to remove this labor item?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => removeLabor(index)
+                }
+            ]
+        );
+    };
+
+    const handleDeleteFee = (index: number) => {
+        Alert.alert(
+            "Delete Fee",
+            "Are you sure you want to remove this fee?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => removeFee(index)
+                }
             ]
         );
     };
@@ -101,6 +145,14 @@ export default function QuoteBuilder({ route, navigation }: any) {
                     />
                     <TextInput
                         style={styles.input}
+                        placeholder="Customer Email"
+                        value={clientEmail}
+                        onChangeText={setClientEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                    />
+                    <TextInput
+                        style={styles.input}
                         placeholder="Service Address"
                         value={clientAddress}
                         onChangeText={setClientAddress}
@@ -116,18 +168,25 @@ export default function QuoteBuilder({ route, navigation }: any) {
 
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Parts</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('SupplierLookup', { url: 'https://thermalsupplyinc.com', supplierName: 'Thermal Supply' })}>
+                    <TouchableOpacity onPress={() => navigation.navigate('CapturePart', { supplier: 'Parts Town' })}>
                         <Plus color="#007AFF" size={24} />
                     </TouchableOpacity>
                 </View>
 
                 {parts.map((part, index) => (
                     <View key={index} style={styles.item}>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.itemName}>{part.name}</Text>
-                            <Text style={styles.itemSubtext}>{part.supplier} | Qty: {part.quantity}</Text>
+                        <View style={{ flex: 1, alignItems: 'flex-start' }}>
+                            <Text style={styles.itemName}>{part.partNumber}</Text>
+                            <Text style={styles.itemSubtext}>
+                                {part.name ? `${part.name} | ` : ''}{part.supplier} | Qty: {part.quantity}
+                            </Text>
                         </View>
-                        <Text style={styles.itemPrice}>${(part.markupPrice * part.quantity).toFixed(2)}</Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={styles.itemPrice}>${(part.markupPrice * part.quantity).toFixed(2)}</Text>
+                            <TouchableOpacity onPress={() => handleDeletePart(index)} style={{ marginTop: 8 }}>
+                                <Trash2 color="#FF3B30" size={20} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 ))}
 
@@ -144,7 +203,12 @@ export default function QuoteBuilder({ route, navigation }: any) {
                             <Text style={styles.itemName}>{l.description}</Text>
                             <Text style={styles.itemSubtext}>{l.hours} hrs @ ${l.hourlyRate}/hr</Text>
                         </View>
-                        <Text style={styles.itemPrice}>${l.total.toFixed(2)}</Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={styles.itemPrice}>${l.total.toFixed(2)}</Text>
+                            <TouchableOpacity onPress={() => handleDeleteLabor(index)} style={{ marginTop: 8 }}>
+                                <Trash2 color="#FF3B30" size={20} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 ))}
 
@@ -160,7 +224,12 @@ export default function QuoteBuilder({ route, navigation }: any) {
                         <View style={{ flex: 1 }}>
                             <Text style={styles.itemName}>{f.name}</Text>
                         </View>
-                        <Text style={styles.itemPrice}>${f.amount.toFixed(2)}</Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={styles.itemPrice}>${f.amount.toFixed(2)}</Text>
+                            <TouchableOpacity onPress={() => handleDeleteFee(index)} style={{ marginTop: 8 }}>
+                                <Trash2 color="#FF3B30" size={20} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 ))}
 

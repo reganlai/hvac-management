@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { Users, FileText, Settings, Plus, LogOut, ChevronRight } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useState, useRef } from 'react';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useState, useRef, useCallback } from 'react';
+import { quoteApi, userApi } from '../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -12,6 +13,31 @@ export default function ManagerDashboard() {
     const navigation = useNavigation<any>();
     const [activeTab, setActiveTab] = useState('quotes');
     const scrollRef = useRef<ScrollView>(null);
+    const [quotes, setQuotes] = useState<any[]>([]);
+    const [technicians, setTechnicians] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const loadData = async () => {
+        setIsLoading(true);
+        try {
+            const [quotesRes, techsRes] = await Promise.all([
+                quoteApi.getAllQuotes(),
+                userApi.getTechnicians()
+            ]);
+            setQuotes(quotesRes.data);
+            setTechnicians(techsRes.data);
+        } catch (error) {
+            console.error('Failed to load manager data:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [])
+    );
 
     const handleTabPress = (tab: string) => {
         setActiveTab(tab);
@@ -26,16 +52,6 @@ export default function ManagerDashboard() {
         const index = Math.round(xOffset / SCREEN_WIDTH);
         setActiveTab(index === 0 ? 'quotes' : 'users');
     };
-
-    const QUOTES = [
-        { id: '1', client: 'John Doe', status: 'SIGNED', technician: 'Alice Smith', total: 450.00, date: '2023-10-25' },
-        { id: '2', client: 'Jane Roe', status: 'DRAFT', technician: 'Bob Jones', total: 1200.00, date: '2023-10-24' },
-    ];
-
-    const TECHNICIANS = [
-        { id: '1', name: 'Alice Smith', email: 'alice@hvac.com', active: true },
-        { id: '2', name: 'Bob Jones', email: 'bob@hvac.com', active: true },
-    ];
 
     return (
         <SafeAreaView style={styles.container}>
@@ -66,69 +82,88 @@ export default function ManagerDashboard() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView
-                ref={scrollRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={handleScroll}
-                style={styles.contentScroll}
-            >
-                <View style={styles.page}>
-                    <FlatList
-                        data={QUOTES}
-                        keyExtractor={(item) => item.id}
-                        contentContainerStyle={styles.listContent}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={styles.card}
-                                onPress={() => navigation.navigate('QuoteDetails', { quote: item })}
-                            >
-                                <View style={styles.cardHeader}>
-                                    <Text style={styles.clientName}>{item.client}</Text>
-                                    <View style={[styles.statusBadge, { backgroundColor: item.status === 'SIGNED' ? '#E1F8EB' : '#FFF4E5' }]}>
-                                        <Text style={[styles.statusText, { color: item.status === 'SIGNED' ? '#27AE60' : '#FF9500' }]}>{item.status}</Text>
+            {isLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#007AFF" />
+                </View>
+            ) : (
+                <ScrollView
+                    ref={scrollRef}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={handleScroll}
+                    style={styles.contentScroll}
+                >
+                    <View style={styles.page}>
+                        <FlatList
+                            data={quotes}
+                            keyExtractor={(item) => item.id}
+                            contentContainerStyle={styles.listContent}
+                            ListEmptyComponent={
+                                <Text style={styles.emptyText}>No quotes found.</Text>
+                            }
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.card}
+                                    onPress={() => navigation.navigate('QuoteDetails', { quote: item })}
+                                >
+                                    <View style={styles.cardHeader}>
+                                        <Text style={styles.clientName}>{item.clientName || 'Unknown Client'}</Text>
+                                        <View style={[styles.statusBadge, { backgroundColor: item.status === 'SIGNED' ? '#E1F8EB' : '#FFF4E5' }]}>
+                                            <Text style={[styles.statusText, { color: item.status === 'SIGNED' ? '#27AE60' : '#FF9500' }]}>{item.status}</Text>
+                                        </View>
                                     </View>
-                                </View>
-                                <Text style={styles.technicianName}>Tech: {item.technician}</Text>
-                                <View style={styles.cardFooter}>
-                                    <Text style={styles.date}>{item.date}</Text>
-                                    <Text style={styles.amount}>${item.total.toFixed(2)}</Text>
-                                </View>
-                            </TouchableOpacity>
-                        )}
-                    />
-                </View>
+                                    <Text style={styles.technicianName}>
+                                        Tech: {item.technician ? `${item.technician.firstName} ${item.technician.lastName}` : 'Unknown'}
+                                    </Text>
+                                    <View style={styles.cardFooter}>
+                                        <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                                        <Text style={styles.amount}>${Number(item.totalAmount || 0).toFixed(2)}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </View>
 
-                <View style={styles.page}>
-                    <FlatList
-                        data={TECHNICIANS}
-                        keyExtractor={(item) => item.id}
-                        contentContainerStyle={styles.listContent}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={styles.card}
-                                onPress={() => navigation.navigate('TechnicianDetails', { technician: item })}
-                            >
-                                <View style={styles.cardHeader}>
-                                    <Text style={styles.clientName}>{item.name}</Text>
-                                    <ChevronRight color="#CCC" size={20} />
-                                </View>
-                                <Text style={styles.technicianName}>{item.email}</Text>
-                            </TouchableOpacity>
-                        )}
-                        ListFooterComponent={
-                            <TouchableOpacity
-                                style={styles.addBtn}
-                                onPress={() => navigation.navigate('AddTechnician')}
-                            >
-                                <Plus color="#fff" size={20} />
-                                <Text style={styles.addBtnText}>Create New Technician</Text>
-                            </TouchableOpacity>
-                        }
-                    />
-                </View>
-            </ScrollView>
+                    <View style={styles.page}>
+                        <FlatList
+                            data={technicians}
+                            keyExtractor={(item) => item.id}
+                            contentContainerStyle={styles.listContent}
+                            ListEmptyComponent={
+                                <Text style={styles.emptyText}>No technicians found.</Text>
+                            }
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.card}
+                                    onPress={() => navigation.navigate('TechnicianDetails', { technician: item })}
+                                >
+                                    <View style={styles.cardHeader}>
+                                        <Text style={styles.clientName}>{item.firstName} {item.lastName}</Text>
+                                        <ChevronRight color="#CCC" size={20} />
+                                    </View>
+                                    <Text style={styles.technicianName}>{item.email}</Text>
+                                    <View style={[styles.statusBadge, { backgroundColor: item.active ? '#E1F8EB' : '#FFEBEE', alignSelf: 'flex-start' }]}>
+                                        <Text style={[styles.statusText, { color: item.active ? '#27AE60' : '#FF3B30' }]}>
+                                            {item.active ? 'Active' : 'Inactive'}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                            ListFooterComponent={
+                                <TouchableOpacity
+                                    style={styles.addBtn}
+                                    onPress={() => navigation.navigate('AddTechnician')}
+                                >
+                                    <Plus color="#fff" size={20} />
+                                    <Text style={styles.addBtnText}>Create New Technician</Text>
+                                </TouchableOpacity>
+                            }
+                        />
+                    </View>
+                </ScrollView>
+            )}
         </SafeAreaView>
     );
 }
@@ -256,5 +291,16 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         marginLeft: 8,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyText: {
+        textAlign: 'center',
+        color: '#999',
+        marginTop: 24,
+        fontSize: 16,
     }
 });

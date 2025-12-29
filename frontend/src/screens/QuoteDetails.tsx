@@ -6,12 +6,9 @@ import { ArrowLeft, FileText, Package, User } from 'lucide-react-native';
 export default function QuoteDetails({ route, navigation }: any) {
     const { quote } = route.params;
 
-    // Simulate parts data if not provided (since existing mockup QUOTES is minimal)
-    const parts = quote.parts || [
-        { partNumber: 'MOT-12345', name: 'Condenser Fan Motor', quantity: 1, markupPrice: 280.00 },
-        { partNumber: 'CAP-67890', name: 'Dual Run Capacitor', quantity: 1, markupPrice: 45.00 },
-        { partNumber: 'CON-11223', name: 'Contactor 2-Pole', quantity: 1, markupPrice: 65.00 },
-    ];
+    const parts = quote.parts || [];
+    const labor = quote.labor || [];
+    const fees = quote.fees || [];
 
     return (
         <SafeAreaView style={styles.container}>
@@ -28,8 +25,8 @@ export default function QuoteDetails({ route, navigation }: any) {
                     <View style={[styles.statusBadge, { backgroundColor: quote.status === 'SIGNED' ? '#E1F8EB' : '#FFF4E5' }]}>
                         <Text style={[styles.statusText, { color: quote.status === 'SIGNED' ? '#27AE60' : '#FF9500' }]}>{quote.status}</Text>
                     </View>
-                    <Text style={styles.quoteId}>Quote ID: #{quote.id}</Text>
-                    <Text style={styles.date}>{quote.date}</Text>
+                    <Text style={styles.quoteId}>Quote ID: #{quote.id.substring(0, 8)}</Text>
+                    <Text style={styles.date}>{new Date(quote.createdAt).toLocaleDateString()}</Text>
                 </View>
 
                 <View style={styles.section}>
@@ -39,44 +36,104 @@ export default function QuoteDetails({ route, navigation }: any) {
                     </View>
                     <View style={styles.infoCard}>
                         <Text style={styles.infoLabel}>Name</Text>
-                        <Text style={styles.infoValue}>{quote.client}</Text>
+                        <Text style={styles.infoValue}>{quote.clientName || 'N/A'}</Text>
+                        <Text style={[styles.infoLabel, { marginTop: 8 }]}>Email</Text>
+                        <Text style={styles.infoValue}>{quote.clientEmail || 'N/A'}</Text>
+                        <Text style={[styles.infoLabel, { marginTop: 8 }]}>Address</Text>
+                        <Text style={styles.infoValue}>{quote.clientAddress || 'N/A'}</Text>
                         <Text style={[styles.infoLabel, { marginTop: 8 }]}>Technician</Text>
-                        <Text style={styles.infoValue}>{quote.technician}</Text>
+                        <Text style={styles.infoValue}>
+                            {typeof quote.technician === 'object' && quote.technician !== null
+                                ? `${quote.technician.firstName} ${quote.technician.lastName}`
+                                : quote.technician || 'Current User'}
+                        </Text>
                     </View>
                 </View>
 
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Package color="#666" size={18} />
-                        <Text style={styles.sectionTitle}>Parts & Materials</Text>
-                    </View>
-                    {parts.map((part: any, index: number) => (
-                        <View key={index} style={styles.partItem}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.partName}>{part.name}</Text>
-                                <Text style={styles.partNumber}>PN: {part.partNumber}</Text>
-                            </View>
-                            <View style={{ alignItems: 'flex-end' }}>
-                                <Text style={styles.partPrice}>${part.markupPrice.toFixed(2)}</Text>
-                                <Text style={styles.partQty}>Qty: {part.quantity}</Text>
-                            </View>
+                {/* Parts Section */}
+                {parts.length > 0 && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Package color="#666" size={18} />
+                            <Text style={styles.sectionTitle}>Parts & Materials</Text>
                         </View>
-                    ))}
+                        {parts.map((part: any, index: number) => (
+                            <View key={index} style={styles.partItem}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.partName}>{part.name || 'Part'}</Text>
+                                    <Text style={styles.partNumber}>PN: {part.partNumber}</Text>
+                                </View>
+                                <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={styles.partPrice}>${Number(part.markupPrice || 0).toFixed(2)}</Text>
+                                    <Text style={styles.partQty}>Qty: {part.quantity}</Text>
+                                </View>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {/* Labor Section */}
+                {labor.length > 0 && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <FileText color="#666" size={18} />
+                            <Text style={styles.sectionTitle}>Labor</Text>
+                        </View>
+                        {labor.map((l: any, index: number) => (
+                            <View key={index} style={styles.partItem}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.partName}>{l.description}</Text>
+                                    <Text style={styles.partNumber}>{l.hours} hrs @ ${l.hourlyRate}/hr</Text>
+                                </View>
+                                <Text style={styles.partPrice}>${Number(l.total || 0).toFixed(2)}</Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {/* Fees Section */}
+                {fees.length > 0 && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <FileText color="#666" size={18} />
+                            <Text style={styles.sectionTitle}>Additional Fees</Text>
+                        </View>
+                        {fees.map((f: any, index: number) => (
+                            <View key={index} style={styles.partItem}>
+                                <Text style={[styles.partName, { flex: 1 }]}>{f.name}</Text>
+                                <Text style={styles.partPrice}>${Number(f.amount || 0).toFixed(2)}</Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {/* Total Section */}
+                <View style={styles.section}>
                     <View style={styles.totalRow}>
                         <Text style={styles.totalLabel}>Total Amount</Text>
-                        <Text style={styles.totalValue}>${quote.total.toFixed(2)}</Text>
+                        <Text style={styles.totalValue}>${Number(quote.totalAmount || quote.total || 0).toFixed(2)}</Text>
                     </View>
                 </View>
 
+                {/* Signature Section */}
                 {quote.status === 'SIGNED' && (
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
                             <FileText color="#666" size={18} />
                             <Text style={styles.sectionTitle}>Customer Signature</Text>
                         </View>
-                        <View style={styles.signaturePlaceholder}>
-                            <Text style={styles.placeholderText}>[Digital Signature Captured]</Text>
-                        </View>
+                        {quote.signature ? (
+                            <View style={styles.signatureContainer}>
+                                <Image
+                                    source={{ uri: quote.signature }}
+                                    style={{ width: '100%', height: 120, resizeMode: 'contain' }}
+                                />
+                            </View>
+                        ) : (
+                            <View style={styles.signaturePlaceholder}>
+                                <Text style={styles.placeholderText}>[Signature Recorded]</Text>
+                            </View>
+                        )}
                     </View>
                 )}
             </ScrollView>
@@ -221,5 +278,13 @@ const styles = StyleSheet.create({
     placeholderText: {
         color: '#999',
         fontStyle: 'italic',
+    },
+    signatureContainer: {
+        height: 120,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#eee',
+        overflow: 'hidden',
     }
 });

@@ -2,9 +2,9 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma.js';
+import { getJwtSecret } from '../config/auth.js';
 
 const router = Router();
-const getJwtSecret = () => process.env.JWT_SECRET || 'supersecret';
 
 // Internal-only login
 router.post('/login', async (req, res) => {
@@ -36,7 +36,7 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign(
             { id: user.id, role: user.role },
             secret,
-            { expiresIn: '8h' }
+            { expiresIn: '7d' }
         );
 
         res.json({

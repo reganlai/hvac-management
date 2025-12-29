@@ -22,6 +22,15 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-app.listen(Number(port), '0.0.0.0', () => {
+import { initializeEmailService } from './services/email.js';
+
+app.listen(Number(port), '0.0.0.0', async () => {
+    console.log('Starting server and initializing email service...');
+    await initializeEmailService();
+
+    if (!process.env.JWT_SECRET) {
+        console.warn('WARNING: JWT_SECRET is not defined in .env. Using default "supersecret". This is insecure and may cause issues if the server restarts.');
+    }
+
     console.log(`HVAC Backend listening on all interfaces at port ${port}`);
 });

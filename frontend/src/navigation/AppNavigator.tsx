@@ -13,6 +13,7 @@ import AddTechnician from '../screens/AddTechnician';
 import TechnicianDetails from '../screens/TechnicianDetails';
 import AddLaborScreen from '../screens/AddLaborScreen';
 import AddFeeScreen from '../screens/AddFeeScreen';
+import AllQuotesScreen from '../screens/AllQuotesScreen';
 import TechnicianTabs from './TechnicianTabs';
 
 const Stack = createStackNavigator();
@@ -36,6 +37,7 @@ export default function AppNavigator() {
                     <Stack.Screen name="AddFee" component={AddFeeScreen} />
                     <Stack.Screen name="SignatureCapture" component={SignatureCaptureScreen} />
                     <Stack.Screen name="QuoteDetails" component={QuoteDetails} />
+                    <Stack.Screen name="AllQuotes" component={AllQuotesScreen} />
                 </>
             ) : (
                 <>

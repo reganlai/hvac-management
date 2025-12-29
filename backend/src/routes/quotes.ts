@@ -1,8 +1,79 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth.js';
+import { sendQuoteEmail } from '../services/email.js';
 
 const router = Router();
+
+// Get all quotes for the authenticated technician
+router.get('/', authenticate, authorize(['TECHNICIAN']), async (req: AuthRequest, res) => {
+    try {
+        const quotes = await prisma.quote.findMany({
+            where: {
+                technicianId: req.user!.id,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+            include: {
+                parts: true,
+                labor: true,
+                fees: true,
+            },
+        });
+        res.json(quotes);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch quotes' });
+    }
+});
+
+// Get all quotes (Manager only)
+router.get('/all', authenticate, authorize(['MANAGER']), async (req: AuthRequest, res) => {
+    try {
+        const quotes = await prisma.quote.findMany({
+            orderBy: {
+                createdAt: 'desc',
+            },
+            include: {
+                technician: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                    }
+                },
+                parts: true,
+                labor: true,
+                fees: true,
+            },
+        });
+        res.json(quotes);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch all quotes' });
+    }
+});
+
+// Get quotes by user ID (Manager only)
+router.get('/user/:userId', authenticate, authorize(['MANAGER']), async (req: AuthRequest, res) => {
+    const { userId } = req.params;
+    try {
+        const quotes = await prisma.quote.findMany({
+            where: {
+                technicianId: userId,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+            include: {
+                parts: true,
+                labor: true,
+                fees: true,
+            },
+        });
+        res.json(quotes);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch user quotes' });
+    }
+});
 
 // Create a new quote (Technician)
 router.post('/', authenticate, authorize(['TECHNICIAN']), async (req: AuthRequest, res) => {
@@ -124,17 +195,32 @@ router.post('/:id/sign', authenticate, authorize(['TECHNICIAN']), async (req, re
             return res.status(400).json({ error: 'Quote not found or already signed' });
         }
 
-        await prisma.quote.update({
+        const updatedQuote = await prisma.quote.update({
             where: { id },
             data: {
                 signature,
                 signedAt: new Date(),
                 status: 'SIGNED',
             },
+            include: {
+                parts: true,
+                labor: true,
+                fees: true,
+            },
         });
 
-        res.json({ message: 'Quote signed and locked successfully' });
+        // Send email to client
+        // We don't await this to avoid blocking the response, or we can await if we want to ensure it sent
+        // For better UX, maybe fire and forget, but for reliability, await.
+        // Let's await to catch errors in logs easily.
+        // Send email to client
+        console.log('Attempting to send email to:', updatedQuote.clientEmail);
+        console.log('Quote ID:', updatedQuote.id);
+        await sendQuoteEmail(updatedQuote);
+
+        res.json({ message: 'Quote signed and locked successfully. Email sent to client.' });
     } catch (error) {
+        console.error('Failed to sign quote:', error);
         res.status(500).json({ error: 'Failed to sign quote' });
     }
 });

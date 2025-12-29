@@ -6,6 +6,25 @@ import bcrypt from 'bcryptjs';
 const router = Router();
 
 // Only managers can create technicians
+router.get('/', authenticate, authorize(['MANAGER']), async (req: AuthRequest, res) => {
+    try {
+        const technicians = await prisma.user.findMany({
+            where: { role: 'TECHNICIAN' },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                active: true,
+                role: true
+            }
+        });
+        res.json(technicians);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch technicians' });
+    }
+});
+
 router.post('/', authenticate, authorize(['MANAGER']), async (req: AuthRequest, res) => {
     const { email, password, firstName, lastName, role } = req.body;
 

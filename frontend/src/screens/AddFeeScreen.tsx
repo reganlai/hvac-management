@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Save } from 'lucide-react-native';
+import { useQuoteContext } from '../context/QuoteContext';
 
 export default function AddFeeScreen({ navigation }: any) {
+    const { addFee } = useQuoteContext();
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
 
@@ -25,7 +27,8 @@ export default function AddFeeScreen({ navigation }: any) {
             amount: amt
         };
 
-        navigation.navigate('QuoteBuilder', { newFee });
+        addFee(newFee);
+        navigation.goBack();
     };
 
     return (
