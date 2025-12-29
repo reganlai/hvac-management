@@ -1,0 +1,25 @@
+# Node.js dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+*.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Build folders
+dist/
+build/
+
+# Secret or sensitive files
+backend/fix_env.cjs
+
+# Editor files
+.vscode/
+.idea/
